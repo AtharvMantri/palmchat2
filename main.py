@@ -24,6 +24,13 @@ class User(db.Model):
     email = db.Column(db.String(100), nullable=False)
     password = db.Column(db.String(100), nullable=False)
 
+class Blog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.String(10000), nullable=False)
+    author = db.Column(db.String(200), nullable=False)
+    date = db.Column(db.String(200), nullable=False)
+
 # Set your PaLM API key here
 palm.configure(api_key='AIzaSyAkbv4lemKTxx1pW2_4YzTEHYMB2DWRq4c')
 
@@ -49,6 +56,28 @@ def index():
         db.session.commit()
         return redirect('/')
     return render_template('index.html')
+
+@app.route('/blog/<int:blog_id>')
+def blog(blog_id):
+    blog = Blog.query.get(blog_id)
+
+    return render_template('blog.html', blog=blog)
+
+@app.route('/addblog', methods=['GET', 'POST'])
+def addblog():
+    if request.method=='POST':
+        title = request.form.get('title')
+        content = request.form.get('content')
+        author = request.form.get('author')
+        date = get_current_time()
+
+        blog = Blog(title=title, content=content, author=author, date=date)
+        db.session.add(blog)
+        db.session.commit()
+        flash("Blog Added to site")
+        return redirect('/addblog')
+    return render_template('addblog.html')
+
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
