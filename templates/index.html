@@ -40,15 +40,17 @@
         <a class="body_a" href="general.html">Learn more</a>
       </div>
     </div> -->
+    {{% for blog in blogs %}}
     <div class="item">
       <div class="img img-third"></div>
       <div class="card">
-        <h3>Super AI</h3>
-        <p>Super AI, or Artificial Superintelligence (ASI), is a hypothetical form of AI that is not yet possible to achieve. ASI is a type of AI that surpasses human intelligence and can perform any task better than a human.</p>
-        <a class="body_a" href="super.html">Learn more</a>
+        <h3>{{blog.title}}</h3>
+        <p>{{blog.content[100]}}</p>
+        <a class="body_a" href="blog.html">Learn more</a>
       </div>
     </div>
   </div>
+  {{% endfor %}}
 
 
   <nav class="blocks">
