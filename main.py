@@ -1,8 +1,28 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect, session, flash
 import google.generativeai as palm
 from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
+
+# Database Initializations
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/palmchat'
+db = SQLAlchemy(app)  # Initialize SQLAlchemy with the Flask app
+app.secret_key = 'palmchatsecret'
+
+class Contact(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(15), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), nullable=False)
+    password = db.Column(db.String(100), nullable=False)
 
 # Set your PaLM API key here
 palm.configure(api_key='AIzaSyAkbv4lemKTxx1pW2_4YzTEHYMB2DWRq4c')
@@ -16,9 +36,62 @@ defaults = {
     'top_p': 0.95,
 }
 
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        phone = request.form.get('phone')
+        message = request.form.get('message')
+        
+        contact = Contact(name=name, email=email, phone=phone, message=message)
+        db.session.add(contact)
+        db.session.commit()
+        return redirect('/')
+    return render_template('index.html')
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        phone = request.form.get('phone')
+        password = request.form.get('password')
+
+        user = User(name=name, email=email, phone=phone, password=password)
+        db.session.add(user)
+        db.session.commit()
+        session['name'] = name
+        session['email'] = email
+        session['phone'] = phone
+        session['user'] = True
+        return redirect('/greet')
+    return render_template('login.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        password = request.form.get('password')
+
+        user = User.query.filter_by(name=name).first()
+
+        if user:
+            if user.password == password:
+                session['name'] = name
+                session['email'] = user.email
+                session['phone'] = user.phone
+                session['user'] = True
+                flash("Login Successful")
+                return redirect('/greet')
+            else:
+                flash("Incorrect Password")
+        else:
+            flash("User Doesn't Exist")
+    return render_template('login.html')
+
+@app.route('/palmchat', methods=['GET', 'POST'])
+def palmchat():
     response_text = []
     user_input = None
 
@@ -42,7 +115,7 @@ def index():
         response_text.append(('user', user_input, get_current_time()))
         response_text.append(('ai', ai_response, get_current_time()))
 
-    return render_template('index.html', response_text=response_text, user_input=user_input)
+    return render_template('chat.html', response_text=response_text, user_input=user_input)
 
 
 def get_current_time():
@@ -98,6 +171,7 @@ def month(time):
     else:
         return "Unknown"
 
-
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
